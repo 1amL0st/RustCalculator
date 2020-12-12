@@ -96,7 +96,7 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(string: &'a str) -> Scanner<'a> {
+    pub fn new(string: &'a str) -> Self {
         let mut sc = Scanner {
             string: string,
             iterator: string.char_indices().peekable(),

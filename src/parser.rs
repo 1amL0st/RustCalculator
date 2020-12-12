@@ -47,14 +47,14 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(input: &'a str) -> Parser<'a> {
+    pub fn new(input: &'a str) -> Self {
         Parser {
             scanner: Scanner::new(input),
             lexiographic_table: std::collections::HashMap::new(),
         }
     }
 
-    pub fn from(input: Scanner<'a>) -> Parser<'a> {
+    pub fn from(input: Scanner<'a>) -> Self {
         Parser {
             scanner: input,
             lexiographic_table: std::collections::HashMap::new(),
@@ -172,9 +172,9 @@ impl<'a> Parser<'a> {
 
     fn func(self: &mut Self) -> Result<f64, String> {
         match self.scanner.peek() {
-            Token::Function(ref f) => {
+            Token::Function(f) => {
                 self.scanner.next();
-                match *f {
+                match f {
                     Function::Log => {
                         self.expect(Token::Lparen, "Syntax: log(x,y)")?;
                         let v1 = self.expr()?;
@@ -243,7 +243,7 @@ impl<'a> Parser<'a> {
                     }
                     _ => {
                         let v = self.func()?;
-                        match *f {
+                        match f {
                             Function::Ln => Result::Ok(v.ln()),
                             Function::Exp => Result::Ok(std::f64::consts::E.powf(v)),
                             Function::Abs => Result::Ok(v.abs()),
@@ -308,20 +308,26 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn id(self: &mut Self) -> Result<f64, String> {
+    fn id(&mut self) -> Result<f64, String> {
         match self.scanner.peek() {
             Token::Text(s) => {
                 self.scanner.next();
                 match self.scanner.peek() {
                     Token::Equals => {
                         self.scanner.next();
+                        println!("We are here!");
                         let v = self.expr()?;
+                        println!("We are writting: s = {}, v = {}", s, v);
                         self.lexiographic_table.insert(s, v);
+                        println!("table inserted = {:?}", self.lexiographic_table);
                         Result::Ok(v)
                     }
-                    _ => match self.lexiographic_table.get(s) {
-                        Option::Some(v) => return Result::Ok(*v),
-                        Option::None => self.error("Unknown variable or constant"),
+                    _ => {
+                        println!("table = {:?}", self.lexiographic_table);
+                        match self.lexiographic_table.get(s) {
+                            Option::Some(v) => return Result::Ok(*v),
+                            Option::None => self.error("Unknown variable or constant"),
+                        }
                     },
                 }
             }
