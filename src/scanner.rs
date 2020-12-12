@@ -62,6 +62,8 @@ pub enum Function {
     Mean,
     Product,
     Exp,
+    Min,
+    Max,
 }
 
 impl std::fmt::Display for Function {
@@ -82,6 +84,8 @@ impl std::fmt::Display for Function {
             Function::Mean => write!(f, "mean"),
             Function::Product => write!(f, "product"),
             Function::Exp => write!(f, "exp"),
+            Function::Min => write!(f, "min"),
+            Function::Max => write!(f, "max"),
         }
     }
 }
@@ -241,6 +245,8 @@ impl<'a> Scanner<'a> {
             "sum" => Token::Function(Function::Sum),
             "mean" | "avg" | "average" => Token::Function(Function::Mean),
             "prod" | "product" => Token::Function(Function::Product),
+            "min" => Token::Function(Function::Min),
+            "max" => Token::Function(Function::Max),
             //Unknown
             _ => Token::Text(s),
         }

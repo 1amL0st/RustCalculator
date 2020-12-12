@@ -65,7 +65,7 @@ impl<'a> Parser<'a> {
         Result::Err(format!("Error: {}\n{}", error, self.scanner.print_pos()))
     }
 
-    fn expect(self: &mut Self, t2: Token, reason: &str) -> Result<f64, String> {
+    fn next_with_check(self: &mut Self, t2: Token, reason: &str) -> Result<f64, String> {
         if self.scanner.next() == t2 {
             Result::Ok(0.0)
         } else {
@@ -176,70 +176,101 @@ impl<'a> Parser<'a> {
                 self.scanner.next();
                 match f {
                     Function::Log => {
-                        self.expect(Token::Lparen, "Syntax: log(x,y)")?;
+                        let syntax_sample = "Syntax: log(x,y)";
+                        self.next_with_check(Token::Lparen, syntax_sample)?;
                         let v1 = self.expr()?;
                         match self.scanner.peek() {
                             Token::Comma => {
                                 self.scanner.next();
                                 let v2 = self.expr()?;
-                                self.expect(Token::Rparen, "Syntax: log(x,y)")?;
+                                self.next_with_check(Token::Rparen, syntax_sample)?;
                                 Result::Ok(v1.log(v2))
                             }
                             Token::Rparen => {
                                 self.scanner.next();
                                 Result::Ok(v1.ln())
                             }
-                            _ => self.error("Syntax: log(x,y)"),
+                            _ => self.error(syntax_sample),
                         }
                     }
                     Function::Atan2 => {
-                        self.expect(Token::Lparen, "Syntax: atan2(y,x)")?;
+                        let syntax_sample = "Syntax: atan2(y,x)";
+                        self.next_with_check(Token::Lparen, syntax_sample)?;
                         let v1 = self.expr()?;
-                        self.expect(Token::Comma, "Syntax: atan2(y,x)")?;
+                        self.next_with_check(Token::Comma, syntax_sample)?;
                         let v2 = self.expr()?;
-                        self.expect(Token::Rparen, "Syntax: atan2(y,x)")?;
+                        self.next_with_check(Token::Rparen, syntax_sample)?;
                         Result::Ok(v1.atan2(v2))
                     }
                     Function::Sum => {
+                        let syntax_sample = "Syntax: sum(x,y,...)";
                         let mut v: f64 = 0.0;
-                        self.expect(Token::Lparen, "Syntax: sum(x,y,...)")?;
+                        self.next_with_check(Token::Lparen, syntax_sample)?;
                         loop {
                             v += self.expr()?;
                             if self.scanner.peek() == Token::Rparen {
-                                self.expect(Token::Rparen, "Syntax: sum(x,y,...)")?;
+                                self.next_with_check(Token::Rparen, syntax_sample)?;
                                 break;
                             }
-                            self.expect(Token::Comma, "Syntax: sum(x,y,...)")?;
+                            self.next_with_check(Token::Comma, syntax_sample)?;
                         }
                         Result::Ok(v)
                     }
                     Function::Mean => {
+                        let syntax_sample = "Syntax: sum(x,y,...)";
                         let mut v: f64 = 0.0;
                         let mut c: f64 = 0.0;
-                        self.expect(Token::Lparen, "Syntax: sum(x,y,...)")?;
+                        self.next_with_check(Token::Lparen, syntax_sample)?;
                         loop {
                             v += self.expr()?;
                             c += 1.0;
                             if self.scanner.peek() == Token::Rparen {
-                                self.expect(Token::Rparen, "Syntax: sum(x,y,...)")?;
+                                self.next_with_check(Token::Rparen, syntax_sample)?;
                                 break;
                             }
-                            self.expect(Token::Comma, "Syntax: sum(x,y,...)")?;
+                            self.next_with_check(Token::Comma, syntax_sample)?;
                         }
                         Result::Ok(v / c)
                     }
                     Function::Product => {
+                        let syntax_sample = "Syntax: prod(x,y,...)";
                         let mut v: f64 = 1.0;
-                        self.expect(Token::Lparen, "Syntax: sum(x,y,...)")?;
+                        self.next_with_check(Token::Lparen, syntax_sample)?;
                         loop {
                             v *= self.expr()?;
                             if self.scanner.peek() == Token::Rparen {
-                                self.expect(Token::Rparen, "Syntax: sum(x,y,...)")?;
+                                self.next_with_check(Token::Rparen, syntax_sample)?;
                                 break;
                             }
-                            self.expect(Token::Comma, "Syntax: sum(x,y,...)")?;
+                            self.next_with_check(Token::Comma, syntax_sample)?;
                         }
                         Result::Ok(v)
+                    }
+                    Function::Min => {
+                        let syntax_sample = "Syntax: min(x,y,...)";
+                        self.next_with_check(Token::Lparen, syntax_sample)?;
+                        let mut min = self.expr()?;
+                        loop {
+                            if self.scanner.peek() == Token::Rparen {
+                                self.next_with_check(Token::Rparen, syntax_sample)?;
+                                break;
+                            }
+                            min = min.min(self.expr()?);
+                        }
+                        Ok(min)
+                    }
+                    Function::Max => {
+                        let syntax_sample = "Syntax: max(x,y,...)";
+                        self.next_with_check(Token::Lparen, syntax_sample)?;
+                        let mut max = self.expr()?;
+                        loop {
+                            if self.scanner.peek() == Token::Rparen {
+                                self.next_with_check(Token::Rparen, syntax_sample)?;
+                                break;
+                            }
+                            max = max.max(self.expr()?);
+                        }
+                        Ok(max)
                     }
                     _ => {
                         let v = self.func()?;
@@ -294,13 +325,13 @@ impl<'a> Parser<'a> {
             Token::Lparen => {
                 self.scanner.next();
                 let v = self.expr()?;
-                self.expect(Token::Rparen, "Expected Right Parenthesis")?;
+                self.next_with_check(Token::Rparen, "Expected Right Parenthesis")?;
                 Result::Ok(v)
             }
             Token::Bar => {
                 self.scanner.next();
                 let v = self.expr()?;
-                self.expect(Token::Bar, "Expected |")?;
+                self.next_with_check(Token::Bar, "Expected |")?;
                 Result::Ok(v.abs())
             }
             Token::Text(_) => self.id(),
@@ -315,15 +346,11 @@ impl<'a> Parser<'a> {
                 match self.scanner.peek() {
                     Token::Equals => {
                         self.scanner.next();
-                        println!("We are here!");
                         let v = self.expr()?;
-                        println!("We are writting: s = {}, v = {}", s, v);
                         self.lexiographic_table.insert(s, v);
-                        println!("table inserted = {:?}", self.lexiographic_table);
                         Result::Ok(v)
                     }
                     _ => {
-                        println!("table = {:?}", self.lexiographic_table);
                         match self.lexiographic_table.get(s) {
                             Option::Some(v) => return Result::Ok(*v),
                             Option::None => self.error("Unknown variable or constant"),
