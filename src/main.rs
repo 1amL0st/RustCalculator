@@ -1,6 +1,9 @@
 use std::io::{ Write };
 use std::env;
 
+extern crate console;
+use console::{ Term, Key };
+
 mod scanner;
 mod parser;
 use parser::Parser;
@@ -34,22 +37,68 @@ fn tests() {
     }
 }
 
+struct Terminal {
+    terminal: Term,
+    prompt_msg: String,
+}
+
+impl Terminal {
+    fn new(prompt_msg: String) -> Self {
+        Terminal {
+            terminal: Term::buffered_stdout(),
+            prompt_msg,
+        }
+    }
+
+    fn read_line(&mut self) -> String {
+        print!("{}", self.prompt_msg);
+        std::io::stdout().flush().expect("Unknow error while flushing stdin!");
+        // self.terminal.write(self.prompt_msg.as_bytes());
+
+        let mut string = String::default();
+        loop {
+            if let Ok(key) = self.terminal.read_key() {
+                if let Key::Enter = key {
+                    break;
+                }
+                if let Key::Char(code) = key {
+                    string.push(code);
+                    print!("{}", code);
+                    std::io::stdout().flush().expect("Unknow error while flushing stdin!");
+                }
+            }
+        }
+        string
+    }
+
+    fn clear(&self) {
+        match self.terminal.clear_screen() {
+            Err(_) => {},
+            Ok(()) => {}
+        }
+    }
+}
+
 fn main() {
-    tests();
+    let mut terminal = Terminal::new(String::from(">>> "));
 
     loop {
-        print!(">>> ");
-        std::io::stdout().flush().expect("Unknow error while flushing stdin!");
+        let exp = terminal.read_line();
 
-        let mut exp = String::new();
-        std::io::stdin().read_line(&mut exp).expect("Can't read line!");
-        exp = exp.trim().to_string();
+        // print!(">>> ");
+        // std::io::stdout().flush().expect("Unknow error while flushing stdin!");
+
+        // let mut exp = String::new();
+        // std::io::stdin().read_line(&mut exp).expect("Can't read line!");
+        // exp = exp.trim().to_string();
 
         let exp_str = exp.as_str();
 
         match exp_str {
             "exit" => break,
             "help" => print_help(),
+            "clear" => terminal.clear(),
+
             _ => {
                 match compute(exp_str) {
                     Result::Ok(v) => println!("Result = {}", v),
