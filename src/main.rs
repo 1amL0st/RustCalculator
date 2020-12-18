@@ -2,13 +2,18 @@ use std::io::{ Write };
 use std::env;
 
 extern crate console;
-use console::{ Term, Key };
 
 mod scanner;
 mod parser;
 use parser::Parser;
 
+
 use std::collections::HashMap;
+
+mod terminal_history;
+mod terminal;
+
+use terminal::Terminal;
 
 fn compute(exp_str: &str) -> Result<f64, String> {
     let mut r: Result<f64, String> = Ok(0.);
@@ -21,78 +26,14 @@ fn compute(exp_str: &str) -> Result<f64, String> {
     r
 }
 
-fn tests() {
-    let mut map = HashMap::new();
-    map.insert("min(1, 2, 3, sum(1, 5))", 1.);
-    map.insert("min(0) + min(1)", 1.);
-    map.insert("min(min(1, 2), 3)", 1.);
-    map.insert("min(max(-4, -2), 3)", -2.);
-
-    for exp in map {
-        let result = compute(exp.0).unwrap();
-        if result != exp.1 {
-            println!("{}", format!("Expression: {}\nExpected: {}\nResult: {}", exp.0, exp.1, result));
-            panic!();
-        }
-    }
-}
-
-struct Terminal {
-    terminal: Term,
-    prompt_msg: String,
-}
-
-impl Terminal {
-    fn new(prompt_msg: String) -> Self {
-        Terminal {
-            terminal: Term::buffered_stdout(),
-            prompt_msg,
-        }
-    }
-
-    fn read_line(&mut self) -> String {
-        print!("{}", self.prompt_msg);
-        std::io::stdout().flush().expect("Unknow error while flushing stdin!");
-        // self.terminal.write(self.prompt_msg.as_bytes());
-
-        let mut string = String::default();
-        loop {
-            if let Ok(key) = self.terminal.read_key() {
-                if let Key::Enter = key {
-                    break;
-                }
-                if let Key::Char(code) = key {
-                    string.push(code);
-                    print!("{}", code);
-                    std::io::stdout().flush().expect("Unknow error while flushing stdin!");
-                }
-            }
-        }
-        string
-    }
-
-    fn clear(&self) {
-        match self.terminal.clear_screen() {
-            Err(_) => {},
-            Ok(()) => {}
-        }
-    }
-}
-
 fn main() {
-    let mut terminal = Terminal::new(String::from(">>> "));
+    let mut terminal = Terminal::new(String::from(">>> "), 16);
+    terminal.clear();
 
     loop {
         let exp = terminal.read_line();
-
-        // print!(">>> ");
-        // std::io::stdout().flush().expect("Unknow error while flushing stdin!");
-
-        // let mut exp = String::new();
-        // std::io::stdin().read_line(&mut exp).expect("Can't read line!");
-        // exp = exp.trim().to_string();
-
         let exp_str = exp.as_str();
+        println!("exp_str = {}", exp_str);
 
         match exp_str {
             "exit" => break,
@@ -119,4 +60,26 @@ fn print_help() {
     println!("Example:    {} 2 + 2 - cos pi", exe);
     println!("");
     println!("For more information see: https://github.com/Aggrathon/RustCalculator");
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use crate::compute;
+
+    #[test]
+    fn calculator_tests() {
+        let mut map = HashMap::new();
+        map.insert("min(1, 2, 3, sum(1, 5))", 1.);
+        map.insert("min(0) + min(1)", 1.);
+        map.insert("min(min(1, 2), 3)", 1.);
+        map.insert("min(max(-4, -2), 3)", -2.);
+        map.insert("1 + 2", 3.);
+
+        for exp in map {
+            let result = compute(exp.0).unwrap();
+            println!("Expression: {}\nExpected: {}\nResult: {}\n\n", exp.0, exp.1, result);
+            assert_eq!(exp.1, result);
+        }
+    }
 }
